@@ -13,7 +13,7 @@
 - `n2t edge [...]`：终端节点，创建虚拟网卡并加入二层虚拟局域网。
 - `n2t supernode [...]`：注册 / 中继节点，负责发现与直连失败后的 UDP 转发。
 - `n2tctl`：**本地认证 IPC 控制客户端**，只查询/控制已经运行的 `n2t`，本身不开网卡、不跑 UDP/P2P，没有 `n2t` 在跑就什么都做不了。
-- **不解析、不翻译、不互通 n2n / EasyTier 线协议**。`-c/-l/-a/-m/-k`、`N2N_KEY`、`N2N_COMPAT`、`internal/n2n`、`n2n.uglife.cn` 只是 CLI / 内部包名 / 部署 DNS 兼容术语。
+- **不解析、不翻译、不互通 n2n / EasyTier 线协议**。`-c/-l/-a/-m/-k`、`N2T_*`、`n2n.uglife.cn` 只是自有 CLI / 部署 DNS 术语；`N2N_KEY` / `N2N_PASSWORD` 环境变量已移除。
 - macOS / iOS / darwin **不支持**：无构建目标、无原生 TUN、无 IPC 实现。Android 是 VpnService 引擎目标，不提供 APK。
 
 端口约定：N2T1 用 `-p` 指定端口（常见 `27777`），MESH1 中继固定用 `+1000`（`28777`，接近上限时反向偏移），不按社区派生新端口。`-l` 省略端口时用 `7654`。**没有 TCP transport，不要放行 TCP 27777**；旧 UDP `5644`/`5645` 管理口已不存在，控制走本地认证 IPC。
@@ -38,13 +38,11 @@
 
 ```powershell
 # 中继 / 注册节点
-.\n2t.exe supernode -p 27777 --mesh-network mynet -v
+.\n2t.exe supernode -p 27777 --mesh-network mynet --mesh-secret '<随机口令>' -v
 
 # 两个终端节点（另开两个管理员 PowerShell）
-$env:N2N_KEY = '换成很长的随机口令'
-.\n2t.exe edge -c mynet -a 10.9.0.2/24 -m 02:09:00:00:00:02 -l 127.0.0.1:27777 -v
-$env:N2N_KEY = '换成很长的随机口令'
-.\n2t.exe edge -c mynet -a 10.9.0.3/24 -m 02:09:00:00:00:03 -l 127.0.0.1:27777 -v
+.\n2t.exe edge -c mynet -k '<随机口令>' -a 10.9.0.2/24 -m 02:09:00:00:00:02 -l 127.0.0.1:27777 -v
+.\n2t.exe edge -c mynet -k '<随机口令>' -a 10.9.0.3/24 -m 02:09:00:00:00:03 -l 127.0.0.1:27777 -v
 ```
 
 在节点 A 上 `ping 10.9.0.3`，节点 B 上 `ping 10.9.0.2`。
@@ -55,11 +53,11 @@ Linux `edge` 需要 root 或 `CAP_NET_ADMIN` 加 `/dev/net/tun`：
 
 ```bash
 chmod +x n2t n2tctl
-./n2t supernode -p 27777 --mesh-network mynet -v
-N2N_KEY='换成很长的随机口令' ./n2t edge -c mynet -a 10.9.0.2/24 -m 02:09:00:00:00:02 -l 127.0.0.1:27777 -v
+./n2t supernode -p 27777 --mesh-network mynet --mesh-secret '<随机口令>' -v
+./n2t edge -c mynet -k '<随机口令>' -a 10.9.0.2/24 -m 02:09:00:00:00:02 -l 127.0.0.1:27777 -v
 ```
 
-独立节点（非 GUI 环境）的部署口径是**在启动命令里显式传 `-J` / `-k`**，不再依赖 `EnvironmentFile`；注意口令会出现在 `/proc/<pid>/cmdline`、`systemctl status` 和 shell history，需自行限制进程列表与日志访问。环境变量兜底仍保留以兼容旧脚本。`systemd` unit 建议 `0600 root:root`。
+独立节点（非 GUI 环境）必须在启动命令里显式传 `-J` / `-k`，解析器不读取任何环境变量；注意口令会出现在 `/proc/<pid>/cmdline`、`systemctl status` 和 shell history，需自行限制进程列表与日志访问。`systemd` unit 建议 `0600 root:root`。
 
 ## 4. 语法与解析规则
 
@@ -102,8 +100,8 @@ n2t supernode [参数...]
 
 | 参数 | 别名 | 模式 | 取值与默认 | 实际作用 |
 |---|---|---|---|---|
-| `-c <社区>` | `--community` | E | 1..64 字节，E 必填；可由 `N2N_COMMUNITY` 提供 | 社区隔离与密钥派生；S 模式下告警忽略 |
-| `-k <口令>` | `--key` | E/S | 最长 256 字节；可由 `N2N_KEY` 提供 | E：社区密钥；S：联邦 HMAC 与 MESH1 探活密钥来源 |
+| `-c <社区>` | `--community` | E | 1..64 字节，E 必填 | 社区隔离与密钥派生；S 模式下告警忽略 |
+| `-k <口令>` | `--key` | E/S | 最长 256 字节，E 必填 | E：社区密钥；S：联邦 HMAC 与 MESH1 探活密钥来源 |
 | `-l <host:port>` | `--supernode`、`--supernode-list`、`--listen` | E/S | 可重复；省略端口 `7654` | E：supernode 地址列表；S：联邦节点地址列表 |
 | `-p [<ip>:]<port>` | `--port`、`--local-port` | E/S | `1..65535`；IPv6 写 `[::]:27777` | S：监听地址/端口；E：本地 UDP 绑定；与 `-4/-6` 冲突时报错 |
 | `-a <ip[/前缀]>` | `--ip`、`--addr` | E | CIDR 或裸 IP；IPv4 `1..32`，IPv6 `1..128`；支持 `static:`、`dhcp:`、`auto:`、`auto46` | 虚拟 IP 与前缀；与 underlay 地址族独立 |
@@ -125,12 +123,12 @@ n2t supernode [参数...]
 | `-S1` | — | E | 布尔 | 强制走中继，底层仍是 UDP |
 | `-S2` | — | E | 布尔 | 同 `-S1`，不启用 TCP 中继 |
 | `-i <秒>` | `--registration-interval` | E | 整数，`<=0` 回退 `20` | 注册/打洞周期 |
-| `-J <口令>` | `--user-password`、`N2N_PASSWORD` | S | 字符串 | 联邦同步 HMAC 密钥的优先来源 |
+| `-J <口令>` | `--user-password` | S | 字符串 | 联邦同步 HMAC 密钥；必须显式传入 |
 | `-F <名称>` | `--federation` | S | 字符串 | 联邦名，与 `-l` 启用带 HMAC 的同步 |
 | `--broadcast-limit <n>` | — | E | `1..10000`，默认 `1000` | 每秒广播限速 |
 | `--replay-ttl <时长>` | — | E | `10s..10m`，默认 `60s` | 防重放窗口，如 `90s`、`2m` |
 | `--mesh-network <名称>` | 支持 `<名称>:<密钥>` | S | 可重复 | 在固定 MESH1 端口登记社区；冒号内嵌密钥会进 argv，不推荐 |
-| `--mesh-secret <口令>` | — | S | 字符串 | 与前/后一个 `--mesh-network` 配对的探活密钥 |
+| `--mesh-secret <口令>` | — | S | 字符串 | 与前/后一个 `--mesh-network` 配对的探活密钥；必须显式提供 |
 | `--mesh-relay-open-probes` | — | S | 布尔 | 允许未登记社区限流探活；中继不解密用户数据 |
 | `-v` | `--verbose` | E/S | 布尔，可重复/带数字 | 提高日志级别到 debug |
 | `--log-to-exe-dir` | — | E/S | 布尔，默认关闭 | 在可执行文件目录追加写 `n2t.log`（0600），仍写 stderr |
@@ -139,19 +137,16 @@ n2t supernode [参数...]
 
 `-c`、`-M`、`-V` 在 S 模式下都会告警忽略。`--mgmt-port` **不是** `-p` 的别名，已被移除。
 
-### 环境变量（兼容兜底）
+### 环境变量
 
 | 变量 | 模式 | 作用 |
 |---|---|---|
-| `N2N_KEY` | E/S | 社区密钥；S 下也是联邦 / MESH1 探活密钥来源，不进 argv |
-| `N2N_COMMUNITY` | E | 社区名 |
-| `N2N_PASSWORD` | S | 联邦 HMAC，等价 `-J`，优先于 `N2N_KEY` |
 | `N2T_TAP_GUID` | E | Windows TAP GUID |
 | `N2T_DEVICE` | E | TAP/TUN 设备名 |
 | `N2T_TUN_FD` | E | Android/嵌入式 TUN FD |
-| `N2T_REGION` | E | MESH1 选路区域提示，无 n2n 兼容含义 |
+| `N2T_REGION` | E | MESH1 选路区域提示 |
 
-`--log-to-exe-dir` 没有环境变量形式，只能命令行开启。
+不支持 `N2N_KEY` / `N2N_PASSWORD` / `N2N_COMMUNITY`，也没有任何 `N2N_*` 兜底。社区名、密钥与联邦 HMAC 只能由参数显式提供。`--log-to-exe-dir` 没有环境变量形式，只能命令行开启。
 
 ### 已移除参数（只告警，不生效）
 
@@ -162,9 +157,10 @@ n2t supernode [参数...]
 ### 联邦 supernode + 多社区 MESH1
 
 ```powershell
-$env:N2N_KEY = '换成很长的随机口令'
 .\n2t.exe supernode -p 27777 -F uglife-prod-2026 -J '联邦HMAC强口令' `
-  --mesh-network room-a --mesh-network room-b --mesh-relay-open-probes -v
+  --mesh-network room-a --mesh-secret '<room-a-口令>' `
+  --mesh-network room-b --mesh-secret '<room-b-口令>' `
+  --mesh-relay-open-probes -v
 ```
 
 ### IPv6 虚拟网段
@@ -172,8 +168,7 @@ $env:N2N_KEY = '换成很长的随机口令'
 虚拟 IP 由 `-a` 决定，与 underlay 独立。老游戏继续用 IPv4 虚拟网段即可。
 
 ```powershell
-$env:N2N_KEY = '换成很长的随机口令'
-.\n2t.exe edge -c v6room -a fd00:1::2/64 -m 02:60:00:00:00:02 -l 1.2.3.4:27777 -v
+.\n2t.exe edge -c v6room -k '<随机口令>' -a fd00:1::2/64 -m 02:60:00:00:00:02 -l 1.2.3.4:27777 -v
 ```
 
 把 underlay 也限定为 IPv6 时，supernode 绑定和 `-l` 都要用 IPv6 字面量并加 `-6`：

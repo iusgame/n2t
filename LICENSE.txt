@@ -1,0 +1,43 @@
+ugN2T N2T 引擎使用约定
+======================
+
+一个用爱发电的闭源引擎工具。作者：tudouni（独立业余开发），联系 QQ：601083006。
+版权所有 (c) 2026 ugN2T / tudouni。不提供源码，不是开源，也不是 source-available。
+
+你可以（免费）：
+- 下载、运行本目录中的 n2t / n2tctl 二进制；
+- 在自己的程序、GUI、管理页面、服务或启动脚本里调用、封装、套壳（wrapper）这些二进制；
+- 在非营利场景下原样分发这些二进制与文档，转发时带上 SHA256SUMS 和本说明。
+
+请别做：
+- 收费、放进商业产品、作为商业服务提供，或靠它直接/间接盈利（除非先和我协商分成）；
+- 改动二进制、哈希或版权信息，把改过的版本说成官方版；
+- 捆绑恶意软件、钓鱼页面或误导性安装器；
+- 反编译、逆向、绕过启动版权自检，或转授我没有给你的权利。
+
+商用 / 盈利分成请先联系我协商：QQ 601083006。违反以上约定，授权即终止。
+
+N2T1 与 MESH1 为自研实现，仅用 Go 标准库，不含 copyleft 源码；“兼容 n2n”只是 CLI
+与运维参数习惯，本引擎不解析、不翻译、不互通 n2n / EasyTier 线协议。外部 TAP/TUN
+驱动及第三方工具不属于本授权，按各自许可证执行。软件按“现状”提供，无保修、无支持承诺。
+
+------------------------------------------------------------
+ugN2T N2T engine - usage terms (English)
+
+A hobby, closed-source engine tool by tudouni. Contact: QQ 601083006.
+Copyright (c) 2026 ugN2T / tudouni. No source code; not open source or source-available.
+
+Free for non-commercial use: you may download and run n2t / n2tctl, call, wrap or build
+shells (wrappers) around them in your own programs, GUIs, dashboards or services, and
+redistribute the unmodified binaries with SHA256SUMS and this notice for non-profit use.
+
+Please don't: charge for it or use it in a commercial product/service unless a revenue
+sharing deal is agreed with me first; modify the binaries, hashes or notices; claim a
+changed build is official; bundle malware or misleading installers; reverse engineer or
+bypass the integrity check.
+
+Commercial use / revenue sharing: contact QQ 601083006 to negotiate. N2T1 and MESH1 are
+my own Go-standard-library code with no copyleft contamination. "n2n compatible" only
+refers to CLI conventions; no n2n/EasyTier wire protocol is parsed or interoperated with.
+Third-party TAP/TUN drivers and tools follow their own licenses. Provided "as is", without
+warranty or support. Use at your own risk.
